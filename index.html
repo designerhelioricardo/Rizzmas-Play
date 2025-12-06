@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Rizzmas Play - Arcade</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              arcade: ['"Press Start 2P"', 'cursive'],
+            },
+            colors: {
+              rizz: {
+                red: '#FF1F1F',
+                green: '#00D632',
+                gold: '#FFD700',
+                dark: '#0F172A',
+                card: '#1E293B'
+              }
+            },
+            animation: {
+              'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              'spin-slow': 'spin 3s linear infinite',
+              'float': 'float 3s ease-in-out infinite',
+              'candy-stripe': 'candyStripe 1s linear infinite',
+            },
+            keyframes: {
+              float: {
+                '0%, 100%': { transform: 'translateY(0)' },
+                '50%': { transform: 'translateY(-10px)' },
+              },
+              candyStripe: {
+                '0%': { backgroundPosition: '0 0' },
+                '100%': { backgroundPosition: '40px 0' }
+              }
+            }
+          },
+        },
+      }
+    </script>
+    <style>
+      body {
+        background-color: #050505;
+        color: white;
+        touch-action: none; /* Prevents scroll on mobile game */
+      }
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #0F172A; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #FF1F1F; 
+        border-radius: 4px;
+      }
+      .scanline {
+        background: linear-gradient(
+          to bottom,
+          rgba(255,255,255,0),
+          rgba(255,255,255,0) 50%,
+          rgba(0,0,0,0.1) 50%,
+          rgba(0,0,0,0.1)
+        );
+        background-size: 100% 4px;
+        position: absolute;
+        pointer-events: none;
+        top: 0; left: 0; right: 0; bottom: 0;
+        z-index: 20;
+      }
+      
+      /* Festive Additions */
+      .candy-border-b {
+        position: relative;
+      }
+      .candy-border-b::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 6px;
+        background: repeating-linear-gradient(
+          45deg,
+          #FF1F1F,
+          #FF1F1F 10px,
+          #FFFFFF 10px,
+          #FFFFFF 20px,
+          #00D632 20px,
+          #00D632 30px,
+          #FFFFFF 30px,
+          #FFFFFF 40px
+        );
+        background-size: 40px 40px; /* Ensure pattern repeats smoothly */
+        animation: candyStripe 2s linear infinite;
+        z-index: 50;
+      }
+
+      .snow-cap {
+        position: relative;
+      }
+      .snow-cap::before {
+        content: '';
+        position: absolute;
+        top: -8px;
+        left: -2px;
+        right: -2px;
+        height: 15px;
+        background-color: white;
+        border-radius: 10px 10px 50% 50%;
+        background-image: radial-gradient(circle at 10px 10px, white 8px, transparent 9px),
+                          radial-gradient(circle at 30px 12px, white 8px, transparent 9px),
+                          radial-gradient(circle at 50px 8px, white 8px, transparent 9px),
+                          radial-gradient(circle at 70px 12px, white 8px, transparent 9px),
+                          radial-gradient(circle at 90px 8px, white 8px, transparent 9px),
+                          radial-gradient(circle at 110px 12px, white 8px, transparent 9px),
+                          radial-gradient(circle at 130px 8px, white 8px, transparent 9px),
+                          radial-gradient(circle at 150px 12px, white 8px, transparent 9px),
+                          radial-gradient(circle at 170px 8px, white 8px, transparent 9px),
+                          radial-gradient(circle at 190px 12px, white 8px, transparent 9px),
+                          radial-gradient(circle at 210px 8px, white 8px, transparent 9px),
+                          radial-gradient(circle at 230px 12px, white 8px, transparent 9px);
+        background-repeat: repeat-x;
+        z-index: 10;
+        filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3));
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
+    "react/": "https://aistudiocdn.com/react@^19.2.1/",
+    "@solana/web3.js": "https://aistudiocdn.com/@solana/web3.js@^1.98.4",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.556.0",
+    "vite": "https://aistudiocdn.com/vite@^7.2.6",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
