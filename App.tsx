@@ -9,7 +9,7 @@ import { GameBounce } from './components/GameBounce';
 import { Button } from './components/Button';
 import { Leaderboard } from './components/Leaderboard';
 import { MOCK_LEADERBOARD_DATA, TOKEN_NAME, TOKEN_TICKER, TOKEN_IMAGE_URL } from './constants';
-import { Wallet, Coins, Snowflake, Upload, Gamepad2, ArrowLeft, RotateCcw, Trophy, TrendingUp, Users, Rocket, Gift } from 'lucide-react';
+import { Wallet, Coins, Snowflake, Upload, Gamepad2, ArrowLeft, RotateCcw, Trophy, TrendingUp, Users, Rocket, Gift, ExternalLink, Heart, Copy } from 'lucide-react';
 
 const App: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>(GameState.IDLE);
@@ -400,10 +400,57 @@ const App: React.FC = () => {
       {/* New Community/Buyback Section */}
       {gameState === GameState.IDLE && renderBuybackSection()}
 
-      {/* Footer */}
-      <footer className="relative z-10 py-8 text-center text-[10px] text-white/30 border-t border-white/5 font-mono bg-black/40">
-        <p className="mb-2">CA: {process.env.NODE_ENV === 'development' ? 'TEST_MODE' : 'COMING_SOON_ON_PUMP_FUN'}</p>
-        <p>POWERED BY SOLANA • BUILT FOR RIZZMAS</p>
+      {/* Updated Footer */}
+      <footer className="relative z-10 py-12 text-center text-xs text-gray-400 border-t border-white/10 bg-black/80 backdrop-blur-sm mt-auto">
+        <div className="container mx-auto px-4 grid md:grid-cols-3 gap-8">
+            
+            {/* Token Info */}
+            <div className="flex flex-col items-center md:items-start space-y-3">
+                 <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-rizz-red rounded flex items-center justify-center font-bold text-white text-[10px]">R</div>
+                    <h4 className="font-arcade text-white">RIZZMAS TOKEN</h4>
+                 </div>
+                 <div className="text-left">
+                    <p className="text-[10px] text-gray-500 font-mono mb-1">CONTRACT ADDRESS:</p>
+                    <div className="flex items-center gap-2 bg-white/5 px-2 py-1 rounded border border-white/10 group cursor-pointer hover:bg-white/10 transition">
+                         <p className="text-[10px] font-mono break-all text-white/70 select-all">
+                            7tkrisk7a65J7Jzbm4dFuKSxXnJCKbmZrcwPquCppump
+                         </p>
+                    </div>
+                 </div>
+                 <a 
+                    href="https://pump.fun/coin/7tkrisk7a65J7Jzbm4dFuKSxXnJCKbmZrcwPquCppump" 
+                    target="_blank" 
+                    rel="noreferrer" 
+                    className="flex items-center gap-2 text-[10px] font-arcade text-rizz-green hover:text-white transition mt-2"
+                 >
+                    VIEW ON PUMP.FUN <ExternalLink size={10} />
+                 </a>
+            </div>
+
+            {/* Donation */}
+            <div className="flex flex-col items-center space-y-3">
+                 <div className="flex items-center gap-2 text-rizz-gold">
+                    <Heart size={16} fill="currentColor" />
+                    <h4 className="font-arcade">SANTA'S TIP JAR</h4>
+                 </div>
+                 <p className="text-[10px] max-w-xs mx-auto leading-relaxed text-gray-400">
+                    Help keep the sleigh flying and the servers running! Spread the Christmas cheer and support future game development. 🎅✨
+                 </p>
+                 <div className="bg-gradient-to-r from-rizz-green/10 to-emerald-900/10 p-3 rounded-lg border border-rizz-green/30 font-mono text-[10px] break-all text-rizz-green select-all w-full max-w-xs text-center">
+                    8eFbDerwkWohA5YcRWYRJxPqMdt1fnbu27rxqWYkTADz
+                 </div>
+            </div>
+
+            {/* Credits */}
+             <div className="flex flex-col items-center md:items-end justify-center space-y-2 text-white/30">
+                 <p className="font-arcade text-[10px] uppercase tracking-widest">Powered by Solana</p>
+                 <p className="text-[10px]">BUILT FOR RIZZMAS PLAY © 2024</p>
+                 <div className="flex gap-4 mt-2">
+                    {/* Social placeholders could go here */}
+                 </div>
+            </div>
+        </div>
       </footer>
     </div>
   );
