@@ -1,5 +1,6 @@
+
 import { PhantomProvider, WindowWithSolana } from '../types';
-import { GAME_COST_SOL, TREASURY_WALLET_ADDRESS } from '../constants';
+import { TREASURY_WALLET_ADDRESS } from '../constants';
 import * as web3 from '@solana/web3.js';
 
 // Setup connection to Devnet for this demo.
@@ -20,7 +21,7 @@ export const getProvider = (): PhantomProvider | undefined => {
 export const connectWallet = async (): Promise<string | null> => {
   const provider = getProvider();
   if (!provider) {
-    // Fallback: If no wallet, we can open the link (optional), but for now return null
+    // Fallback: If no wallet, we can return null or handle UI
     return null;
   }
   
@@ -33,17 +34,17 @@ export const connectWallet = async (): Promise<string | null> => {
   }
 };
 
-export const processGamePayment = async (userPublicKey: string): Promise<boolean> => {
+export const processPayment = async (userPublicKey: string, amountSol: number): Promise<boolean> => {
   const provider = getProvider();
   if (!provider) return false;
 
   try {
-    console.log("Initiating transaction...");
+    console.log(`Initiating transaction for ${amountSol} SOL...`);
     const transaction = new web3.Transaction().add(
       web3.SystemProgram.transfer({
         fromPubkey: new web3.PublicKey(userPublicKey),
         toPubkey: new web3.PublicKey(TREASURY_WALLET_ADDRESS),
-        lamports: GAME_COST_SOL * web3.LAMPORTS_PER_SOL,
+        lamports: Math.floor(amountSol * web3.LAMPORTS_PER_SOL),
       })
     );
 

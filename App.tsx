@@ -1,15 +1,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { GameState, LeaderboardEntry, GameType } from './types';
-import { connectWallet, getProvider } from './services/solanaService';
+import { connectWallet, getProvider, processPayment } from './services/solanaService';
 import { GameRunner } from './components/GameRunner';
 import { GameShooter } from './components/GameShooter';
 import { GameCatcher } from './components/GameCatcher';
 import { GameBounce } from './components/GameBounce';
 import { Button } from './components/Button';
 import { Leaderboard } from './components/Leaderboard';
-import { MOCK_LEADERBOARD_DATA, TOKEN_NAME, TOKEN_TICKER, TOKEN_IMAGE_URL } from './constants';
-import { Wallet, Coins, Snowflake, Upload, Gamepad2, ArrowLeft, RotateCcw, Trophy, TrendingUp, Users, Rocket, Gift, ExternalLink, Heart, Copy } from 'lucide-react';
+import { MOCK_LEADERBOARD_DATA, TOKEN_NAME, TOKEN_TICKER, CREDIT_PACKS, CREDIT_COST_PER_GAME } from './constants';
+import { Wallet, Coins, Snowflake, Upload, Gamepad2, ArrowLeft, RotateCcw, Trophy, TrendingUp, Users, Rocket, Gift, ExternalLink, Heart, ShoppingCart, X } from 'lucide-react';
 
 const App: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>(GameState.IDLE);
@@ -18,6 +18,10 @@ const App: React.FC = () => {
   const [score, setScore] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(MOCK_LEADERBOARD_DATA);
+  
+  // Credit System
+  const [credits, setCredits] = useState(0); // 1 Credit = $0.01 (1 Game)
+  const [showStore, setShowStore] = useState(false);
   
   // Submission Form State
   const [playerName, setPlayerName] = useState('');
@@ -28,6 +32,7 @@ const App: React.FC = () => {
     if (provider?.publicKey) {
       setWalletAddress(provider.publicKey.toString());
     }
+    // Check local storage for credits? (Optional, simplified for now)
   }, []);
 
   const handleConnect = async () => {
@@ -35,21 +40,54 @@ const App: React.FC = () => {
     if (address) {
       setWalletAddress(address);
     } else {
+      // Demo mode fallback if no phantom
       setWalletAddress("TEST_WALLET_MODE_ACTIVE");
     }
   };
 
   const handleSelectGame = (type: GameType) => {
     setSelectedGameType(type);
-    handleStartPayment();
+    
+    // Check Credits
+    if (credits >= CREDIT_COST_PER_GAME) {
+      setCredits(prev => prev - CREDIT_COST_PER_GAME);
+      setGameState(GameState.PLAYING);
+    } else {
+      setShowStore(true);
+    }
   };
 
-  const handleStartPayment = async () => {
-    // BYPASS WALLET FOR TEST MODE AS REQUESTED
+  const handleBuyCredits = async (packId: string) => {
+    const pack = CREDIT_PACKS.find(p => p.id === packId);
+    if (!pack) return;
+    
+    if (!walletAddress) {
+      handleConnect();
+      return;
+    }
+
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 600));
+
+    let success = false;
+    
+    if (walletAddress === "TEST_WALLET_MODE_ACTIVE") {
+       // Simulate success for test mode
+       await new Promise(r => setTimeout(r, 1000));
+       success = true;
+    } else {
+       // Real Transaction
+       success = await processPayment(walletAddress, pack.priceSol);
+    }
+
+    if (success) {
+      setCredits(prev => prev + pack.credits);
+      setShowStore(false);
+      // Optional: Play cha-ching sound
+    } else {
+      alert("Transaction cancelled or failed.");
+    }
+    
     setIsLoading(false);
-    setGameState(GameState.PLAYING);
   };
 
   const handleGameOver = (finalScore: number) => {
@@ -65,8 +103,13 @@ const App: React.FC = () => {
   };
 
   const handleRetry = () => {
-    setScore(0);
-    setGameState(GameState.PLAYING);
+    if (credits >= CREDIT_COST_PER_GAME) {
+       setCredits(prev => prev - CREDIT_COST_PER_GAME);
+       setScore(0);
+       setGameState(GameState.PLAYING);
+    } else {
+       setShowStore(true);
+    }
   };
 
   const handleGoToSubmit = () => {
@@ -110,6 +153,54 @@ const App: React.FC = () => {
   };
 
   // --- Render Helpers ---
+
+  const renderStoreModal = () => (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
+      <div className="bg-rizz-card border-2 border-rizz-gold rounded-xl w-full max-w-md relative shadow-[0_0_50px_rgba(255,215,0,0.2)]">
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-rizz-gold text-black font-arcade text-xs px-4 py-1 rounded-full border border-white/20">
+           INSERT COIN
+        </div>
+        <button 
+          onClick={() => setShowStore(false)}
+          className="absolute top-2 right-2 text-white/50 hover:text-white transition"
+        >
+          <X size={24} />
+        </button>
+
+        <div className="p-6 md:p-8 text-center">
+           <h2 className="text-2xl font-arcade text-white mb-2">NEED CREDITS?</h2>
+           <p className="text-gray-400 text-xs mb-8">Each play costs $0.01 (1 Credit).</p>
+
+           <div className="grid gap-4">
+              {CREDIT_PACKS.map(pack => (
+                 <button 
+                    key={pack.id}
+                    disabled={isLoading}
+                    onClick={() => handleBuyCredits(pack.id)}
+                    className="flex items-center justify-between bg-black/40 hover:bg-white/5 border border-white/10 hover:border-rizz-green p-4 rounded-lg group transition-all"
+                 >
+                    <div className="flex items-center gap-4">
+                        <div className="text-4xl group-hover:scale-110 transition-transform">{pack.icon}</div>
+                        <div className="text-left">
+                            <div className="font-arcade text-rizz-gold text-sm">{pack.name}</div>
+                            <div className="text-xs text-gray-400">{pack.credits} Credits</div>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <div className="font-arcade text-white">${pack.priceUsd.toFixed(2)}</div>
+                        <div className="text-[10px] text-gray-500 font-mono">~{pack.priceSol} SOL</div>
+                    </div>
+                 </button>
+              ))}
+           </div>
+           
+           <div className="mt-6 text-[10px] text-gray-600">
+              Payments processed securely via Solana.
+           </div>
+        </div>
+      </div>
+    </div>
+  );
 
   const renderGameSelector = () => (
     <div className="flex flex-col items-center text-center space-y-8 animate-fade-in relative z-20 w-full max-w-6xl">
@@ -332,9 +423,19 @@ const App: React.FC = () => {
           <span className="hidden md:inline font-bold tracking-tight text-lg drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">RIZZMAS PLAY</span>
         </div>
         <div className="flex items-center gap-4">
+          
+          {/* Credit Display */}
+          <div 
+             className="flex items-center gap-2 bg-black/40 border border-rizz-gold/30 px-3 py-1.5 rounded-full cursor-pointer hover:bg-rizz-gold/10 transition"
+             onClick={() => setShowStore(true)}
+          >
+             <div className="w-2 h-2 bg-rizz-gold rounded-full animate-pulse"></div>
+             <span className="font-arcade text-xs text-rizz-gold">{credits} CREDITS</span>
+             <div className="bg-rizz-gold text-black text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold ml-1">+</div>
+          </div>
+
           {walletAddress ? (
             <div className="flex items-center gap-2 bg-rizz-green/10 border border-rizz-green/30 px-3 py-1.5 rounded-full hover:bg-rizz-green/20 transition cursor-pointer" onClick={handleConnect}>
-              <div className="w-2 h-2 bg-rizz-green rounded-full animate-pulse"></div>
               <span className="text-xs font-mono text-rizz-green">
                 {walletAddress.slice(0, 4)}...{walletAddress.slice(-4)}
               </span>
@@ -371,10 +472,8 @@ const App: React.FC = () => {
 
         {gameState === GameState.PAYMENT && (
           <div className="text-center animate-pulse flex flex-col items-center justify-center h-64">
-            <h2 className="text-xl font-arcade text-rizz-gold mb-8">LOADING CARTRIDGE...</h2>
-            <div className="relative">
-                 <div className="w-20 h-20 border-4 border-t-rizz-green border-r-transparent border-b-rizz-red border-l-transparent rounded-full animate-spin"></div>
-            </div>
+             {/* Replaced by Store Modal usually, but kept as state fallback */}
+            <h2 className="text-xl font-arcade text-rizz-gold mb-8">PROCESSING...</h2>
           </div>
         )}
 
@@ -399,6 +498,9 @@ const App: React.FC = () => {
 
       {/* New Community/Buyback Section */}
       {gameState === GameState.IDLE && renderBuybackSection()}
+
+      {/* Store Modal */}
+      {showStore && renderStoreModal()}
 
       {/* Updated Footer */}
       <footer className="relative z-10 py-12 text-center text-xs text-gray-400 border-t border-white/10 bg-black/80 backdrop-blur-sm mt-auto">
@@ -446,9 +548,6 @@ const App: React.FC = () => {
              <div className="flex flex-col items-center md:items-end justify-center space-y-2 text-white/30">
                  <p className="font-arcade text-[10px] uppercase tracking-widest">Powered by Solana</p>
                  <p className="text-[10px]">BUILT FOR RIZZMAS PLAY © 2024</p>
-                 <div className="flex gap-4 mt-2">
-                    {/* Social placeholders could go here */}
-                 </div>
             </div>
         </div>
       </footer>

@@ -5,15 +5,38 @@ import { LeaderboardEntry } from './types';
 // CONFIGURATION
 // ---------------------------------------------------------
 
-// Replace this with YOUR Wallet Public Key to receive game fees.
-// DO NOT put a private key here.
-export const TREASURY_WALLET_ADDRESS = "RizzmasTreasuryWalletAddressPlaceHolder123";
-
-// Cost per game in SOL (Approx $0.10 USD)
-export const GAME_COST_SOL = 0.0005; 
+// Wallet to receive game fees/donations
+export const TREASURY_WALLET_ADDRESS = "8eFbDerwkWohA5YcRWYRJxPqMdt1fnbu27rxqWYkTADz";
 
 export const TOKEN_NAME = "Rizzmas";
 export const TOKEN_TICKER = "$RIZZMAS";
+export const TOKEN_IMAGE_URL = "https://picsum.photos/200/200?random=99";
+
+// Credit System Configuration
+// Assuming 1 SOL approx $150-200 USD for safe estimation or fixed low amounts for devnet
+// $0.10 USD ~= 0.0005 SOL
+// $1.00 USD ~= 0.005 SOL
+
+export const CREDIT_COST_PER_GAME = 1; // 1 Credit = $0.01
+
+export const CREDIT_PACKS = [
+  {
+    id: 'STARTER',
+    name: 'POCKET CHANGE',
+    credits: 10,     // 10 Plays
+    priceUsd: 0.10,
+    priceSol: 0.0005, 
+    icon: '🪙'
+  },
+  {
+    id: 'BALLER',
+    name: 'HIGH ROLLER',
+    credits: 100,    // 100 Plays
+    priceUsd: 1.00,
+    priceSol: 0.005,
+    icon: '💰'
+  }
+];
 
 // Generate Top 100 Mock Data
 const generateMockData = (): LeaderboardEntry[] => {
@@ -39,5 +62,3 @@ const generateMockData = (): LeaderboardEntry[] => {
 };
 
 export const MOCK_LEADERBOARD_DATA: LeaderboardEntry[] = generateMockData();
-
-export const TOKEN_IMAGE_URL = "https://picsum.photos/200/200?random=99";
