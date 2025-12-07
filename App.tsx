@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { GameState, LeaderboardEntry, GameType } from './types';
 import { connectWallet, getProvider, processPayment } from './services/solanaService';
+import { audioService } from './services/audioService';
 import { GameRunner } from './components/GameRunner';
 import { GameShooter } from './components/GameShooter';
 import { GameCatcher } from './components/GameCatcher';
@@ -9,7 +10,7 @@ import { GameBounce } from './components/GameBounce';
 import { Button } from './components/Button';
 import { Leaderboard } from './components/Leaderboard';
 import { MOCK_LEADERBOARD_DATA, TOKEN_NAME, TOKEN_TICKER, CREDIT_PACKS, CREDIT_COST_PER_GAME } from './constants';
-import { Wallet, Coins, Snowflake, Upload, Gamepad2, ArrowLeft, RotateCcw, Trophy, TrendingUp, Users, Rocket, Gift, ExternalLink, Heart, ShoppingCart, X } from 'lucide-react';
+import { Wallet, Coins, Snowflake, Upload, Gamepad2, ArrowLeft, RotateCcw, Trophy, TrendingUp, Users, Rocket, Gift, ExternalLink, Heart, ShoppingCart, X, Volume2, VolumeX } from 'lucide-react';
 
 const App: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>(GameState.IDLE);
@@ -18,6 +19,9 @@ const App: React.FC = () => {
   const [score, setScore] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(MOCK_LEADERBOARD_DATA);
+  
+  // Audio State
+  const [isMuted, setIsMuted] = useState(audioService.getMuteState());
   
   // Credit System
   const [credits, setCredits] = useState(0); // 1 Credit = $0.01 (1 Game)
@@ -32,23 +36,45 @@ const App: React.FC = () => {
     if (provider?.publicKey) {
       setWalletAddress(provider.publicKey.toString());
     }
-    // Check local storage for credits? (Optional, simplified for now)
   }, []);
 
+  // Manage Background Music based on Game State
+  useEffect(() => {
+    // Only play menu music if user has interacted (ctx exists) or if not muted
+    if (gameState === GameState.IDLE && !isMuted) {
+       audioService.playBGM('MENU');
+    } else if (gameState !== GameState.PLAYING) {
+       audioService.stopBGM();
+    }
+  }, [gameState, isMuted]);
+
+  const handleInteraction = () => {
+    audioService.init();
+    if (gameState === GameState.IDLE && !isMuted) {
+      audioService.playBGM('MENU');
+    }
+  };
+
+  const toggleMute = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const muted = audioService.toggleMute();
+    setIsMuted(muted);
+  };
+
   const handleConnect = async () => {
+    handleInteraction();
     const address = await connectWallet();
     if (address) {
       setWalletAddress(address);
     } else {
-      // Demo mode fallback if no phantom
       setWalletAddress("TEST_WALLET_MODE_ACTIVE");
     }
   };
 
   const handleSelectGame = (type: GameType) => {
+    handleInteraction();
     setSelectedGameType(type);
     
-    // Check Credits
     if (credits >= CREDIT_COST_PER_GAME) {
       setCredits(prev => prev - CREDIT_COST_PER_GAME);
       setGameState(GameState.PLAYING);
@@ -58,6 +84,7 @@ const App: React.FC = () => {
   };
 
   const handleBuyCredits = async (packId: string) => {
+    handleInteraction();
     const pack = CREDIT_PACKS.find(p => p.id === packId);
     if (!pack) return;
     
@@ -71,18 +98,16 @@ const App: React.FC = () => {
     let success = false;
     
     if (walletAddress === "TEST_WALLET_MODE_ACTIVE") {
-       // Simulate success for test mode
        await new Promise(r => setTimeout(r, 1000));
        success = true;
     } else {
-       // Real Transaction
        success = await processPayment(walletAddress, pack.priceSol);
     }
 
     if (success) {
       setCredits(prev => prev + pack.credits);
       setShowStore(false);
-      // Optional: Play cha-ching sound
+      audioService.playSFX('coin');
     } else {
       alert("Transaction cancelled or failed.");
     }
@@ -92,6 +117,7 @@ const App: React.FC = () => {
 
   const handleGameOver = (finalScore: number) => {
     setScore(finalScore);
+    audioService.playSFX('gameover');
     setTimeout(() => {
         setGameState(GameState.GAME_OVER);
     }, 500);
@@ -155,7 +181,7 @@ const App: React.FC = () => {
   // --- Render Helpers ---
 
   const renderStoreModal = () => (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4" onClick={handleInteraction}>
       <div className="bg-rizz-card border-2 border-rizz-gold rounded-xl w-full max-w-md relative shadow-[0_0_50px_rgba(255,215,0,0.2)]">
         <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-rizz-gold text-black font-arcade text-xs px-4 py-1 rounded-full border border-white/20">
            INSERT COIN
@@ -350,7 +376,6 @@ const App: React.FC = () => {
   const renderBuybackSection = () => (
     <div className="w-full max-w-4xl mx-auto my-12 relative z-20 px-4">
         <div className="bg-gradient-to-br from-[#0F172A] to-[#1E293B] border-2 border-rizz-green rounded-xl p-6 md:p-8 relative overflow-hidden shadow-[0_0_20px_rgba(0,214,50,0.2)]">
-            {/* Background elements */}
             <div className="absolute top-0 right-0 p-4 opacity-10">
                 <TrendingUp size={100} className="text-rizz-green" />
             </div>
@@ -378,7 +403,6 @@ const App: React.FC = () => {
                          <span className="text-[10px] font-arcade text-white/60">BUYBACK POOL</span>
                          <span className="text-[10px] font-arcade text-rizz-green">$45 / $100</span>
                     </div>
-                    {/* Mock Progress Bar */}
                     <div className="w-full h-3 bg-gray-800 rounded-full overflow-hidden border border-white/10">
                         <div className="h-full bg-gradient-to-r from-rizz-green to-emerald-300 w-[45%] shadow-[0_0_10px_rgba(0,214,50,0.5)]"></div>
                     </div>
@@ -407,7 +431,7 @@ const App: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white overflow-x-hidden font-sans relative flex flex-col">
+    <div className="min-h-screen bg-[#050505] text-white overflow-x-hidden font-sans relative flex flex-col" onClick={handleInteraction}>
       {/* Background Decor */}
       <div className="fixed inset-0 pointer-events-none z-0">
          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#1a2e35] via-[#050505] to-[#050505]"></div>
@@ -424,6 +448,11 @@ const App: React.FC = () => {
         </div>
         <div className="flex items-center gap-4">
           
+          {/* Audio Toggle */}
+          <button onClick={toggleMute} className="text-gray-400 hover:text-white transition p-2">
+            {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+          </button>
+
           {/* Credit Display */}
           <div 
              className="flex items-center gap-2 bg-black/40 border border-rizz-gold/30 px-3 py-1.5 rounded-full cursor-pointer hover:bg-rizz-gold/10 transition"
@@ -455,14 +484,10 @@ const App: React.FC = () => {
           <div className="flex flex-col items-center w-full gap-8">
             {renderGameSelector()}
             
-            {/* NEW LEADERBOARD SECTION WITH DASHED BORDER */}
             <div className="w-full max-w-6xl mt-8 relative border-[2px] border-dashed border-blue-400/30 rounded-3xl p-6 md:p-10 bg-[#0F172A]/30 backdrop-blur-sm min-h-[400px] flex items-center justify-center shadow-lg">
-                {/* Faint Background Icon */}
                 <div className="absolute left-10 top-1/2 -translate-y-1/2 opacity-[0.03] pointer-events-none hidden lg:block">
                     <Gift size={250} />
                 </div>
-                
-                {/* Leaderboard Component */}
                 <div className="w-full relative z-10">
                    <Leaderboard entries={leaderboard} />
                 </div>
@@ -472,7 +497,6 @@ const App: React.FC = () => {
 
         {gameState === GameState.PAYMENT && (
           <div className="text-center animate-pulse flex flex-col items-center justify-center h-64">
-             {/* Replaced by Store Modal usually, but kept as state fallback */}
             <h2 className="text-xl font-arcade text-rizz-gold mb-8">PROCESSING...</h2>
           </div>
         )}
@@ -496,17 +520,12 @@ const App: React.FC = () => {
 
       </main>
 
-      {/* New Community/Buyback Section */}
       {gameState === GameState.IDLE && renderBuybackSection()}
-
-      {/* Store Modal */}
       {showStore && renderStoreModal()}
 
       {/* Updated Footer */}
       <footer className="relative z-10 py-12 text-center text-xs text-gray-400 border-t border-white/10 bg-black/80 backdrop-blur-sm mt-auto">
         <div className="container mx-auto px-4 grid md:grid-cols-3 gap-8">
-            
-            {/* Token Info */}
             <div className="flex flex-col items-center md:items-start space-y-3">
                  <div className="flex items-center gap-2">
                     <div className="w-6 h-6 bg-rizz-red rounded flex items-center justify-center font-bold text-white text-[10px]">R</div>
@@ -530,7 +549,6 @@ const App: React.FC = () => {
                  </a>
             </div>
 
-            {/* Donation */}
             <div className="flex flex-col items-center space-y-3">
                  <div className="flex items-center gap-2 text-rizz-gold">
                     <Heart size={16} fill="currentColor" />
@@ -544,7 +562,6 @@ const App: React.FC = () => {
                  </div>
             </div>
 
-            {/* Credits */}
              <div className="flex flex-col items-center md:items-end justify-center space-y-2 text-white/30">
                  <p className="font-arcade text-[10px] uppercase tracking-widest">Powered by Solana</p>
                  <p className="text-[10px]">BUILT FOR RIZZMAS PLAY © 2024</p>

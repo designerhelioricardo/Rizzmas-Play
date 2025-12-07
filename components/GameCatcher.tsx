@@ -1,47 +1,20 @@
 
 import React, { useRef, useEffect, useState } from 'react';
+import { audioService } from '../services/audioService';
 
 interface GameCatcherProps {
   onGameOver: (score: number) => void;
   onExit: () => void;
 }
 
-const playSound = (type: 'swing' | 'hit' | 'bounce' | 'thud') => {
-  const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-  if (!AudioContext) return;
-  const ctx = new AudioContext();
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  const now = ctx.currentTime;
-
-  if (type === 'swing') {
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(300, now);
-    osc.frequency.exponentialRampToValueAtTime(100, now + 0.2);
-    gain.gain.setValueAtTime(0.1, now);
-    gain.gain.linearRampToValueAtTime(0, now + 0.2);
-    osc.start(); osc.stop(now + 0.2);
-  } else if (type === 'hit') {
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(150, now);
-    osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
-    gain.gain.setValueAtTime(0.2, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
-    osc.start(); osc.stop(now + 0.2);
-  } else if (type === 'bounce') {
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(200, now);
-    osc.frequency.linearRampToValueAtTime(100, now + 0.1);
-    gain.gain.setValueAtTime(0.1, now);
-    gain.gain.linearRampToValueAtTime(0, now + 0.1);
-    osc.start(); osc.stop(now + 0.1);
-  }
-};
-
 export const GameCatcher: React.FC<GameCatcherProps> = ({ onGameOver, onExit }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Start BGM on Mount
+  useEffect(() => {
+    audioService.playBGM('CATCHER');
+    return () => audioService.stopBGM();
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -95,7 +68,7 @@ export const GameCatcher: React.FC<GameCatcherProps> = ({ onGameOver, onExit }) 
         } else if (gameState === 'DROPPING') {
             // SWING!
             gameState = 'SWINGING';
-            playSound('swing');
+            audioService.playSFX('swing');
             santa.state = 'SWING';
             
             // Check Hit
@@ -106,7 +79,7 @@ export const GameCatcher: React.FC<GameCatcherProps> = ({ onGameOver, onExit }) 
             // Hit Logic
             if (Math.abs(diff) < 60) {
                 // Good Hit
-                playSound('hit');
+                audioService.playSFX('hit');
                 const power = 1 - (Math.abs(diff) / 60); // 0 to 1
                 const baseSpeed = 15;
                 const speed = 10 + (power * 15); // 10 to 25
@@ -319,7 +292,7 @@ export const GameCatcher: React.FC<GameCatcherProps> = ({ onGameOver, onExit }) 
                 if (Math.abs(elf.vy) > 2) {
                     elf.vy = -elf.vy * BOUNCE_DAMPING;
                     elf.vx *= GROUND_FRICTION; // Friction on bounce
-                    playSound('bounce');
+                    audioService.playSFX('bounce');
                 } else {
                     // Rolling
                     elf.vy = 0;

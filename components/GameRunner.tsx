@@ -1,52 +1,21 @@
 
 import React, { useRef, useEffect, useState } from 'react';
+import { audioService } from '../services/audioService';
 
 interface GameRunnerProps {
   onGameOver: (score: number) => void;
   onExit: () => void;
 }
 
-// Audio Synth
-const playSound = (type: 'jump' | 'coin' | 'hit') => {
-  const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-  if (!AudioContext) return;
-  const ctx = new AudioContext();
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-
-  const now = ctx.currentTime;
-  if (type === 'jump') {
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(150, now);
-    osc.frequency.exponentialRampToValueAtTime(300, now + 0.1);
-    gain.gain.setValueAtTime(0.1, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-    osc.start();
-    osc.stop(now + 0.1);
-  } else if (type === 'coin') {
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(800, now);
-    osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
-    gain.gain.setValueAtTime(0.1, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
-    osc.start();
-    osc.stop(now + 0.2);
-  } else if (type === 'hit') {
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(100, now);
-    osc.frequency.exponentialRampToValueAtTime(50, now + 0.3);
-    gain.gain.setValueAtTime(0.2, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-    osc.start();
-    osc.stop(now + 0.3);
-  }
-};
-
 export const GameRunner: React.FC<GameRunnerProps> = ({ onGameOver, onExit }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [currentScore, setCurrentScore] = useState(0);
+
+  // Start BGM on Mount
+  useEffect(() => {
+    audioService.playBGM('RUNNER');
+    return () => audioService.stopBGM();
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -102,7 +71,7 @@ export const GameRunner: React.FC<GameRunnerProps> = ({ onGameOver, onExit }) =>
       if (e) e.preventDefault();
       if (isGameOver) return;
       player.dy = player.lift;
-      playSound('jump');
+      audioService.playSFX('jump');
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -291,7 +260,7 @@ export const GameRunner: React.FC<GameRunnerProps> = ({ onGameOver, onExit }) =>
 
       if (player.y + player.height > canvas.height || player.y < -50) {
         isGameOver = true;
-        playSound('hit');
+        audioService.playSFX('hit');
         onGameOver(score);
       }
 
@@ -336,10 +305,10 @@ export const GameRunner: React.FC<GameRunnerProps> = ({ onGameOver, onExit }) =>
             score += 100;
             setCurrentScore(score);
             entity.markedForDeletion = true;
-            playSound('coin');
+            audioService.playSFX('coin');
           } else {
             isGameOver = true;
-            playSound('hit');
+            audioService.playSFX('hit');
             onGameOver(score);
           }
         }

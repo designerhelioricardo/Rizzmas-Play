@@ -1,66 +1,21 @@
 
 import React, { useRef, useEffect, useState } from 'react';
+import { audioService } from '../services/audioService';
 
 interface GameBounceProps {
   onGameOver: (score: number) => void;
   onExit: () => void;
 }
 
-const playSound = (type: 'jump' | 'collect' | 'stun' | 'powerup' | 'bonus') => {
-  const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-  if (!AudioContext) return;
-  const ctx = new AudioContext();
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  const now = ctx.currentTime;
-
-  if (type === 'jump') {
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(300, now);
-    osc.frequency.linearRampToValueAtTime(500, now + 0.1);
-    gain.gain.setValueAtTime(0.1, now);
-    gain.gain.linearRampToValueAtTime(0, now + 0.1);
-    osc.start(); osc.stop(now + 0.1);
-  } else if (type === 'collect') {
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(800, now);
-    osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
-    gain.gain.setValueAtTime(0.1, now);
-    gain.gain.linearRampToValueAtTime(0, now + 0.1);
-    osc.start(); osc.stop(now + 0.1);
-  } else if (type === 'stun') {
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(150, now);
-    osc.frequency.exponentialRampToValueAtTime(50, now + 0.5);
-    gain.gain.setValueAtTime(0.2, now);
-    gain.gain.linearRampToValueAtTime(0, now + 0.5);
-    osc.start(); osc.stop(now + 0.5);
-  } else if (type === 'powerup') {
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(440, now);
-    osc.frequency.linearRampToValueAtTime(880, now + 0.3);
-    gain.gain.setValueAtTime(0.1, now);
-    gain.gain.linearRampToValueAtTime(0, now + 0.3);
-    osc.start(); osc.stop(now + 0.3);
-  } else if (type === 'bonus') {
-    // NATAL complete melody
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(523, now); // C
-    osc.frequency.setValueAtTime(659, now + 0.1); // E
-    osc.frequency.setValueAtTime(783, now + 0.2); // G
-    osc.frequency.setValueAtTime(1046, now + 0.3); // C
-    gain.gain.setValueAtTime(0.1, now);
-    gain.gain.linearRampToValueAtTime(0, now + 0.5);
-    osc.start(); osc.stop(now + 0.5);
-  }
-};
-
 export const GameBounce: React.FC<GameBounceProps> = ({ onGameOver, onExit }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [cheatCodeBuffer, setCheatCodeBuffer] = useState('');
   const [debugMsg, setDebugMsg] = useState('');
+
+  // Start BGM on Mount
+  useEffect(() => {
+    audioService.playBGM('BOUNCE');
+    return () => audioService.stopBGM();
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -124,11 +79,6 @@ export const GameBounce: React.FC<GameBounceProps> = ({ onGameOver, onExit }) =>
     // --- Cheat Code Listener ---
     const handleKeyDown = (e: KeyboardEvent) => {
         if (e.code === 'Escape') onExit();
-
-        const newBuffer = (cheatCodeBuffer + e.key).slice(-20).toLowerCase();
-        // Since state updates inside event listener are tricky with closures in useEffect loop,
-        // we'll just check a global-ish variable or use the updated ref logic, 
-        // but for simplicity, we will assume the key presses are handled by a mutable string in the scope.
     };
     
     // We need a mutable reference for the cheat buffer to work inside the loop/event listener properly
@@ -141,7 +91,7 @@ export const GameBounce: React.FC<GameBounceProps> = ({ onGameOver, onExit }) =>
         if (keyBuffer.endsWith('docenatal') && !cheatUsed) {
             timeLeft = 60 * 60; // Reset to 60s
             cheatUsed = true;
-            playSound('bonus');
+            audioService.playSFX('powerup');
             setDebugMsg("CHEAT ACTIVATED: TIME RESET");
             setTimeout(() => setDebugMsg(""), 3000);
         }
@@ -171,7 +121,7 @@ export const GameBounce: React.FC<GameBounceProps> = ({ onGameOver, onExit }) =>
             elf.vy = elf.hasSuperJump ? SUPER_JUMP_FORCE : JUMP_FORCE;
             elf.hasSuperJump = false; // Consume powerup
             elf.combo = 0;
-            playSound('jump');
+            audioService.playSFX('jump');
         }
     };
 
@@ -419,6 +369,7 @@ export const GameBounce: React.FC<GameBounceProps> = ({ onGameOver, onExit }) =>
             timeLeft--;
             if (timeLeft <= 0) {
                 isGameOver = true;
+                audioService.playSFX('gameover');
                 onGameOver(score);
             }
         }
@@ -488,7 +439,7 @@ export const GameBounce: React.FC<GameBounceProps> = ({ onGameOver, onExit }) =>
                         elf.stunTimer = 240; // 4 seconds
                         elf.isJumping = false; // Fall down
                         elf.y = GROUND_Y;
-                        playSound('stun');
+                        audioService.playSFX('hit');
                     } else {
                         // HIT GOOD
                         item.markedForDeletion = true;
@@ -512,17 +463,17 @@ export const GameBounce: React.FC<GameBounceProps> = ({ onGameOver, onExit }) =>
                                 if(collectedLetters.every(c => c)) {
                                     timeLeft += 20;
                                     collectedLetters = [false, false, false, false, false];
-                                    playSound('bonus');
+                                    audioService.playSFX('powerup');
                                     setDebugMsg("NATAL BONUS! +20s");
                                     setTimeout(() => setDebugMsg(""), 2000);
                                 } else {
-                                    playSound('collect');
+                                    audioService.playSFX('coin');
                                 }
                             }
                         }
                         else if (item.type === 'POWER_STAR') {
                             elf.hasSuperJump = true;
-                            playSound('powerup');
+                            audioService.playSFX('powerup');
                             setDebugMsg("SUPER JUMP READY!");
                             setTimeout(() => setDebugMsg(""), 1500);
                         }
@@ -530,20 +481,20 @@ export const GameBounce: React.FC<GameBounceProps> = ({ onGameOver, onExit }) =>
                             // Freeze Time logic handled by just adding time effectively or pausing decrement
                             // Let's add time for simplicity
                             timeLeft += 5;
-                            playSound('powerup');
+                            audioService.playSFX('powerup');
                             setDebugMsg("TIME EXTENDED!");
                             setTimeout(() => setDebugMsg(""), 1500);
                         }
                         else if (item.type === 'POWER_BAG') {
                             elf.combo += 5; // Instant multiplier boost
-                            playSound('powerup');
+                            audioService.playSFX('powerup');
                         }
                         else {
                             // Score with Combo
                             elf.combo++;
                             const points = item.value * elf.combo;
                             score += points;
-                            playSound('collect');
+                            audioService.playSFX('coin');
                         }
                     }
                 }

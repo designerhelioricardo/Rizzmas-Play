@@ -1,43 +1,21 @@
 
 import React, { useRef, useEffect, useState } from 'react';
+import { audioService } from '../services/audioService';
 
 interface GameShooterProps {
   onGameOver: (score: number) => void;
   onExit: () => void;
 }
 
-const playSound = (type: 'shoot' | 'explosion') => {
-  const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-  if (!AudioContext) return;
-  const ctx = new AudioContext();
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  const now = ctx.currentTime;
-
-  if (type === 'shoot') {
-    // Laser pew pew
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(880, now);
-    osc.frequency.exponentialRampToValueAtTime(110, now + 0.15);
-    gain.gain.setValueAtTime(0.05, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-    osc.start(); osc.stop(now + 0.15);
-  } else if (type === 'explosion') {
-    // Noise blast
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(100, now);
-    osc.frequency.exponentialRampToValueAtTime(10, now + 0.3);
-    gain.gain.setValueAtTime(0.1, now);
-    gain.gain.linearRampToValueAtTime(0, now + 0.3);
-    osc.start(); osc.stop(now + 0.3);
-  }
-};
-
 export const GameShooter: React.FC<GameShooterProps> = ({ onGameOver, onExit }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [currentScore, setCurrentScore] = useState(0);
+
+  // Start BGM on Mount
+  useEffect(() => {
+    audioService.playBGM('SHOOTER');
+    return () => audioService.stopBGM();
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -84,7 +62,7 @@ export const GameShooter: React.FC<GameShooterProps> = ({ onGameOver, onExit }) 
 
     const shoot = () => {
       if (isGameOver) return;
-      playSound('shoot');
+      audioService.playSFX('shoot');
       
       const speed = 10;
       // Spawn bullet at the tip of the tree (Star location)
@@ -253,7 +231,7 @@ export const GameShooter: React.FC<GameShooterProps> = ({ onGameOver, onExit }) 
         const distToPlayer = Math.hypot(player.x - e.x, player.y - e.y);
         if (distToPlayer < player.size + e.size/2) {
           isGameOver = true;
-          playSound('explosion');
+          audioService.playSFX('explosion');
           onGameOver(score);
         }
 
@@ -263,7 +241,7 @@ export const GameShooter: React.FC<GameShooterProps> = ({ onGameOver, onExit }) 
           const dist = Math.hypot(p.x - e.x, p.y - e.y);
           if (dist < e.size / 2 + 5) {
             createExplosion(e.x, e.y, e.color);
-            playSound('explosion');
+            audioService.playSFX('explosion');
             score += 10;
             setCurrentScore(score);
             projectiles.splice(j, 1);
